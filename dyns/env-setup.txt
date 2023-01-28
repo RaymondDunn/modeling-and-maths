@@ -1,0 +1,4 @@
+# conda create -n dyns python
+# conda activate dyns
+# pip install scikit-learn numba seaborn filterpy matplotlib jupyter scipy pandas pyqt5
+# may need to revisit pyqt5 bindings...
