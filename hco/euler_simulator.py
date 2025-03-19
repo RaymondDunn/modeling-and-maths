@@ -54,8 +54,8 @@ def harmonic_oscillator(t, y):
     """
     return np.array([y[1], -y[0]])
 
-# @jit(nopython=True)
-def hco_morris_lecar(t, y, Iext0=0.4e-6, Iext1=0.0, Cap=1e-6):
+@jit(nopython=True)
+def hco_morris_lecar(t, y, Iext0=0.4e-6, Iext1=0.4e-6, Cap=1e-6):
     # constants
     phiN = 0.000002e3  # seconds^-1 
 
@@ -117,9 +117,10 @@ def run_interactive_simulation():
     plt.subplots_adjust(left=0.15, bottom=0.35)  # Increased bottom margin further
     
     # Create axes for the sliders - moved lower
-    ax_time = plt.axes([0.15, 0.20, 0.65, 0.03])  # [left, bottom, width, height]
-    ax_dt = plt.axes([0.15, 0.15, 0.65, 0.03])
-    ax_iext = plt.axes([0.15, 0.10, 0.65, 0.03])
+    ax_time = plt.axes([0.15, 0.25, 0.65, 0.03])  # [left, bottom, width, height]
+    ax_dt = plt.axes([0.15, 0.20, 0.65, 0.03])
+    ax_iext0 = plt.axes([0.15, 0.15, 0.65, 0.03])
+    ax_iext1 = plt.axes([0.15, 0.10, 0.65, 0.03])  # New slider for Iext1
     ax_cap = plt.axes([0.15, 0.05, 0.65, 0.03])  # New slider for Cap
     
     # Create axes for the radio buttons - moved to the right side
@@ -145,15 +146,25 @@ def run_interactive_simulation():
     )
     
     # Create Iext slider with scientific notation
-    iext_slider = Slider(
-        ax=ax_iext,
+    iext0_slider = Slider(
+        ax=ax_iext0,
         label='Iext0 (µA/cm²)',
         valmin=0,
         valmax=1.0,
         valinit=0.4,
         valstep=0.1
     )
-    
+
+    # Create Iext slider with scientific notation
+    iext1_slider = Slider(
+        ax=ax_iext1,
+        label='Iext1 (µA/cm²)',
+        valmin=0,
+        valmax=1.0,
+        valinit=0.4,
+        valstep=0.1
+    ) 
+
     # Create Cap slider
     cap_slider = Slider(
         ax=ax_cap,
@@ -186,13 +197,14 @@ def run_interactive_simulation():
             initial_conditions = [5e-3, -5e-3, 0.7, 0.06]
             t_start = time.time()
             # Convert Iext slider value from µA/cm² to A/cm²
-            iext0 = iext_slider.val * 1e-6
+            iext0 = iext0_slider.val * 1e-6
+            iext1 = iext1_slider.val * 1e-6
             # Convert Cap slider value from µF/cm² to F/cm²
             cap = cap_slider.val * 1e-6
             
             # Create wrapper function to pass Iext and Cap
             def hco_wrapper(t, y):
-                return hco_morris_lecar(t, y, Iext0=iext0, Cap=cap)
+                return hco_morris_lecar(t, y, Iext0=iext0, Iext1=iext1, Cap=cap)
             
             t, y = euler_simulator(hco_wrapper, initial_conditions, t_span, dt)
             t_end = time.time()
@@ -218,7 +230,8 @@ def run_interactive_simulation():
             ax_recovery.set_visible(True)
             
             # Show Iext and Cap sliders
-            ax_iext.set_visible(True)
+            ax_iext0.set_visible(True)
+            ax_iext1.set_visible(True)
             ax_cap.set_visible(True)
             
         else:  # Harmonic oscillator
@@ -235,7 +248,8 @@ def run_interactive_simulation():
             
             # Hide recovery plot and parameter sliders for harmonic oscillator
             ax_recovery.set_visible(False)
-            ax_iext.set_visible(False)
+            ax_iext0.set_visible(False)
+            ax_iext1.set_visible(False)
             ax_cap.set_visible(False)
         
         # Adjust the layout to prevent overlap
@@ -249,7 +263,8 @@ def run_interactive_simulation():
     # Register update function with the widgets
     time_slider.on_changed(update)
     dt_slider.on_changed(update)
-    iext_slider.on_changed(update)
+    iext0_slider.on_changed(update)
+    iext1_slider.on_changed(update)
     cap_slider.on_changed(update)
     radio.on_clicked(update)
     
