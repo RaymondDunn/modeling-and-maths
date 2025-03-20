@@ -1,4 +1,4 @@
-### hard coded HCO_fast can provide extermal input to main HCO (use HCO2)
+### hard coded HCO_fast can provide extermal input to main HCO
 # magnitude of this input is on a slider
 # no sliders or visualization for the parameters of HCO_fast
 
