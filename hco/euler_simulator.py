@@ -6,6 +6,7 @@ from numba import jit
 import json
 import os
 from datetime import datetime
+import matplotlib.gridspec as gridspec
 
 def euler_simulator(ode_system, initial_conditions, t_span, dt):
     """
@@ -200,35 +201,46 @@ def generate_ou_process(t, dt, mu, sigma, tau):
     
     return x
 
+
+
+
 def run_interactive_simulation():
+    
     # Create the main figure and subplots
-    fig = plt.figure(figsize=(15, 10))  # Made figure wider
+    fig = plt.figure(figsize=(15, 10))#, constrained_layout=True)  # Made figure wider
     
-    # Add subplots for the simulation
-    ax_main = plt.subplot(221)
-    ax_recovery = plt.subplot(223)
-    ax_hist = plt.subplot(122)  # New subplot for histogram
-    
-    # Adjust layout to make room for sliders and radio buttons
-    plt.subplots_adjust(left=0.15, bottom=0.35, hspace=0.4)  # Increased bottom margin and subplot spacing
-    
-    # Create axes for the sliders - moved lower
-    ax_time = plt.axes([0.15, 0.30, 0.65, 0.03])  # [left, bottom, width, height]
-    ax_dt = plt.axes([0.15, 0.28, 0.65, 0.03])
-    ax_iext_mu = plt.axes([0.15, 0.26, 0.65, 0.03])
-    ax_iext_sigma = plt.axes([0.15, 0.24, 0.65, 0.03])
-    ax_iext_tau = plt.axes([0.15, 0.22, 0.65, 0.03])
-    ax_sin_amp = plt.axes([0.15, 0.20, 0.65, 0.03])
-    ax_sin_freq = plt.axes([0.15, 0.18, 0.65, 0.03])
-    ax_iextJ = plt.axes([0.15, 0.16, 0.65, 0.03])
-    ax_cap = plt.axes([0.15, 0.14, 0.65, 0.03]) 
-    ax_phiN = plt.axes([0.15, 0.12, 0.65, 0.03])
-    ax_V_slope = plt.axes([0.15, 0.10, 0.65, 0.03])
-    ax_g_Syn = plt.axes([0.15, 0.08, 0.65, 0.03])
-    
-    # Create axes for the radio buttons and save button - moved to the right side
-    ax_radio = plt.axes([0.88, 0.20, 0.1, 0.1])
-    ax_save = plt.axes([0.88, 0.10, 0.1, 0.05])
+    # define overall window layout
+    gs_main = gridspec.GridSpec(3, 2, height_ratios=[2, 1, 1.5], width_ratios=[1, 1], figure=fig)
+
+    # Define subplots using the main GridSpec
+    ax_main = fig.add_subplot(gs_main[0, 0])  # Top-left: main simulation plot
+    ax_hist = fig.add_subplot(gs_main[0, 1])  # Top-right: histogram
+    ax_recovery = fig.add_subplot(gs_main[1, 0])  # Middle-left: recovery plot
+
+    # Define a nested GridSpec for the sliders within the bottom row of gs_main
+    # slider_gs = gs_main[2, :].subgridspec(12, 1)  # Occupies the last row of gs_main
+    slider_gs = gs_main[2, :].subgridspec(12, 2, width_ratios=[4, 1], wspace=0.3)  
+
+    # Create slider axes using the separate GridSpec
+    slider_labels = [
+        "ax_time", "ax_dt", "ax_iext_mu", "ax_iext_sigma", "ax_iext_tau",
+        "ax_sin_amp", "ax_sin_freq", "ax_iextJ", "ax_cap", "ax_phiN",
+        "ax_V_slope", "ax_g_Syn"
+    ]
+    slider_axes = {label: fig.add_subplot(slider_gs[i, 0]) for i, label in enumerate(slider_labels)}
+    ax_time, ax_dt, ax_iext_mu, ax_iext_sigma, ax_iext_tau, \
+    ax_sin_amp, ax_sin_freq, ax_iextJ, ax_cap, ax_phiN, \
+    ax_V_slope, ax_g_Syn = [slider_axes[key] for key in slider_axes]
+
+    # Hide x/y ticks on slider axes
+    for ax in slider_axes.values():
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_frame_on(False)  # Hide the border
+
+    # Create axes for the radio buttons and save button, positioned on the right
+    ax_radio = fig.add_subplot(slider_gs[:6, 1])  # Top half of right column for radio buttons
+    ax_save = fig.add_subplot(slider_gs[8:10, 1])  # Lower section for save button
     
     # Create save button
     save_button = Button(ax_save, 'Save', color='lightgray', hovercolor='0.975')
@@ -289,7 +301,7 @@ def run_interactive_simulation():
         label='Time Step',
         valmin=0.01,
         valmax=0.1,
-        valinit=0.05,
+        valinit=0.02,
         valstep=0.01
     )
     
@@ -317,7 +329,7 @@ def run_interactive_simulation():
         label='Iext0 Time Constant (s)',
         valmin=0.1,
         valmax=10.0,
-        valinit=1.0,
+        valinit=8.2,
         valstep=0.1
     )
 
@@ -327,7 +339,7 @@ def run_interactive_simulation():
         label='Sinusoidal Amplitude (µA/cm²)',
         valmin=0,
         valmax=1.0,
-        valinit=0.0,
+        valinit=0.3,
         valstep=0.1
     )
 
@@ -356,7 +368,7 @@ def run_interactive_simulation():
         label='Cap (µF/cm²)',
         valmin=0.1,
         valmax=40.0,
-        valinit=1.0,
+        valinit=1.1,
         valstep=0.5
     )
 
@@ -376,7 +388,7 @@ def run_interactive_simulation():
         label='V_slope (mV)',
         valmin=1,
         valmax=100,
-        valinit=15,
+        valinit=16,
         valstep=5
     )
     
@@ -389,6 +401,14 @@ def run_interactive_simulation():
         valinit=30,
         valstep=5
     )
+
+    # Reduce font size for all slider labels
+    sliders = [time_slider, dt_slider, iext_mu_slider, iext_sigma_slider, iext_tau_slider, 
+            sin_amp_slider, sin_freq_slider, iextJ_slider, cap_slider, phiN_slider, 
+            V_slope_slider, g_Syn_slider]
+
+    for slider in sliders:
+        slider.label.set_size(10)
 
     # Create radio buttons for system selection
     radio = RadioButtons(
@@ -624,10 +644,10 @@ def run_interactive_simulation():
             ax_hist.set_visible(False)
         
         # Adjust the layout to prevent overlap
-        if system == 'HCO' or system == 'HCO2':
-            plt.subplots_adjust(hspace=0.3, bottom=0.25)
-        else:
-            plt.subplots_adjust(bottom=0.25)
+        #if system == 'HCO' or system == 'HCO2':
+        #    plt.subplots_adjust(hspace=0.3, bottom=0.25)
+        #else:
+        #    plt.subplots_adjust(bottom=0.25)
             
         fig.canvas.draw_idle()
     
