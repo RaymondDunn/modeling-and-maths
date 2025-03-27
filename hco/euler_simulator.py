@@ -294,7 +294,9 @@ def run_interactive_simulation():
             'phiN': phiN_slider.val,
             'V_slope': V_slope_slider.val,
             'g_Syn': g_Syn_slider.val,
-            'timestamp': timestamp
+            'timestamp': timestamp,
+            'filename': f'simulation_figures/figure_{timestamp}.png'
+            
         }
         
         # Save parameters to JSON file
@@ -449,7 +451,7 @@ def run_interactive_simulation():
     # Create radio buttons for system selection
     radio = RadioButtons(
         ax_radio,
-        ('HCO', 'Oscillator','HCO2'),
+        ('HCO', 'Oscillator'),
         active=0
     )
     
@@ -514,21 +516,23 @@ def run_interactive_simulation():
             
             t_end = time.time()
             print(f"Simulation time elapsed (s): {t_end-t_start:.3f}")
-            
-            # Plot membrane potentials
+
             ax_main.plot(t, y[:, 0], 'r-', label='V1')
             ax_main.plot(t, y[:, 1], 'b-', label='V2')
             ax_main.plot(t, iext0_total/1e-6, 'g--', label='Total Iext0 (µA/cm²)', alpha=0.5)
             ax_main.plot(t, hco_fast/1e-6, 'm--', label='Faster HCO Input (V1_fast-V2_fast)', alpha=0.5)
+            ax_recovery.plot(t, y[:, 2], 'r-', label='N1')
+            ax_recovery.plot(t, y[:, 3], 'b-', label='N2')
+
+
+            # Plot membrane potentials
             ax_main.set_xlabel('Time (s)')
             ax_main.set_ylabel('Voltage (V)')
             ax_main.set_title('Half-Center Oscillator - Membrane Potentials')
             ax_main.legend()
             ax_main.grid(True)
-            
+
             # Plot recovery variables
-            ax_recovery.plot(t, y[:, 2], 'r-', label='N1')
-            ax_recovery.plot(t, y[:, 3], 'b-', label='N2')
             ax_recovery.set_xlabel('Time (s)')
             ax_recovery.set_ylabel('Activation')
             ax_recovery.set_title('Recovery Variables')
@@ -575,92 +579,7 @@ def run_interactive_simulation():
             ax_g_Syn.set_visible(True)
 
         elif system == 'HCO2':
-            initial_conditions = [5e-3, -5e-3, 0.7, 0.06]
-            t_start = time.time()
-            
-            # Generate OU process for Iext0
-            t = np.arange(t_span[0], t_span[1] + dt, dt)
-            iext0_mu = iext_mu_slider.val * 1e-6  # Convert to A/cm²
-            iext0_sigma = iext_sigma_slider.val * 1e-6  # Convert to A/cm²
-            iext0_tau = iext_tau_slider.val
-            iext0 = generate_ou_process(t, dt, iext0_mu, iext0_sigma, iext0_tau)
-            
-            # Convert other slider values
-            cap = cap_slider.val * 1e-6
-            phiN = phiN_slider.val    
-
-            # Create wrapper function to pass Iext and Cap
-            def hco_wrapper(t, y, i):
-                return hco_morris_lecar2(t, y, Iext0=iext0[i], Cap=cap, phiN=phiN)
-            
-            # Modified Euler simulation to handle time-dependent Iext0
-            y = np.zeros((len(t), len(initial_conditions)))
-            y[0] = initial_conditions
-            
-            for i in range(1, len(t)):
-                dy = hco_wrapper(t[i-1], y[i-1], i-1)
-                y[i] = y[i-1] + dt * dy
-            
-            t_end = time.time()
-            print(f"Simulation time elapsed (s): {t_end-t_start:.3f}")
-            
-            # Plot membrane potentials
-            ax_main.plot(t, y[:, 0], 'r-', label='V1')
-            ax_main.plot(t, y[:, 1], 'b-', label='V2')
-            ax_main.plot(t, iext0/1e-6, 'g--', label='Iext0 (µA/cm²)', alpha=0.5)
-            ax_main.set_xlabel('Time (s)')
-            ax_main.set_ylabel('Voltage (V)')
-            ax_main.set_title('Half-Center Oscillator - Membrane Potentials')
-            ax_main.legend()
-            ax_main.grid(True)
-            
-            # Plot recovery variables
-            ax_recovery.plot(t, y[:, 2], 'r-', label='N1')
-            ax_recovery.plot(t, y[:, 3], 'b-', label='N2')
-            ax_recovery.set_xlabel('Time (s)')
-            ax_recovery.set_ylabel('Activation')
-            ax_recovery.set_title('Recovery Variables')
-            ax_recovery.legend()
-            ax_recovery.grid(True)
-            ax_recovery.set_visible(True)
-            
-            # Calculate and plot histogram of positive intervals
-            V1 = y[:, 0]
-            positive_intervals = []
-            current_interval = 0
-            
-            for v in V1:
-                if v > 0:
-                    current_interval += 1
-                elif current_interval > 0:
-                    positive_intervals.append(current_interval * dt)  # Convert to seconds
-                    current_interval = 0
-            
-            # Add the last interval if it's positive
-            if current_interval > 0:
-                positive_intervals.append(current_interval * dt)
-            
-            if positive_intervals:
-                ax_hist.hist(positive_intervals, bins=30, edgecolor='black')
-                ax_hist.set_xlabel('Duration (s)')
-                ax_hist.set_ylabel('Count')
-                ax_hist.set_title('Histogram of Positive V1 Intervals')
-                ax_hist.grid(True)
-            else:
-                ax_hist.text(0.5, 0.5, 'No positive intervals found', 
-                           horizontalalignment='center',
-                           verticalalignment='center',
-                           transform=ax_hist.transAxes)
-            
-            # Show all sliders
-            ax_iext_mu.set_visible(True)
-            ax_iext_sigma.set_visible(True)
-            ax_iext_tau.set_visible(True)
-            ax_iextJ.set_visible(True)
-            ax_cap.set_visible(True)
-            ax_phiN.set_visible(True)
-            ax_V_slope.set_visible(True)
-            ax_g_Syn.set_visible(True)
+            pass
 
         else:  # Harmonic oscillator
             initial_conditions = [1.0, 0.0]
@@ -686,12 +605,7 @@ def run_interactive_simulation():
             ax_recovery.set_visible(False)
             ax_hist.set_visible(False)
         
-        # Adjust the layout to prevent overlap
-        #if system == 'HCO' or system == 'HCO2':
-        #    plt.subplots_adjust(hspace=0.3, bottom=0.25)
-        #else:
-        #    plt.subplots_adjust(bottom=0.25)
-            
+        # get canvas to respond if events emitted
         fig.canvas.draw_idle()
     
     # Register update function with the widgets
